@@ -18,7 +18,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: AGNi_haydn_MIUI_ST
           submodules: recursive
           fetch-depth: 1
 
@@ -56,16 +55,15 @@ jobs:
             zip \
             zlib1g-dev \
             wget \
-            curl \
-            openjdk-11-jdk
+            curl
 
       - name: Setup Clang Toolchain
         run: |
           mkdir -p ~/toolchain
           cd ~/toolchain
 
-          # Download Snapdragon LLVM Clang toolchain
-          echo "Downloading Snapdragon LLVM toolchain..."
+          # Download Google Clang toolchain from AOSP
+          echo "Downloading Google Clang toolchain..."
           wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r450784d.tar.gz -O clang.tar.gz
           mkdir -p clang
           tar -xzf clang.tar.gz -C clang
@@ -83,22 +81,22 @@ jobs:
           # Create snapdragon_llvm.sh configuration
           cat > ~/WORKING_DIRECTORY/snapdragon_llvm.sh << 'EOF'
           #!/bin/bash
-          export CROSS_COMPILE=~/toolchain/clang/bin/aarch64-linux-gnu-
-          export CROSS_COMPILE_ARM32=~/toolchain/clang/bin/arm-linux-gnueabi-
+          export CROSS_COMPILE=$HOME/toolchain/clang/bin/aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=$HOME/toolchain/clang/bin/arm-linux-gnueabi-
           export CLANG_TRIPLE=aarch64-linux-gnu-
-          export CROSS_COMPILE_COMPAT=~/toolchain/clang/bin/arm-linux-gnueabi-
-          export CC=~/toolchain/clang/bin/clang
-          export LD=~/toolchain/clang/bin/ld.lld
-          export AR=~/toolchain/clang/bin/llvm-ar
-          export NM=~/toolchain/clang/bin/llvm-nm
-          export OBJCOPY=~/toolchain/clang/bin/llvm-objcopy
-          export OBJDUMP=~/toolchain/clang/bin/llvm-objdump
-          export READELF=~/toolchain/clang/bin/llvm-readelf
-          export STRIP=~/toolchain/clang/bin/llvm-strip
-          export HOSTCC=~/toolchain/clang/bin/clang
-          export HOSTCXX=~/toolchain/clang/bin/clang++
-          export HOSTAR=~/toolchain/clang/bin/llvm-ar
-          export HOSTLD=~/toolchain/clang/bin/ld.lld
+          export CROSS_COMPILE_COMPAT=$HOME/toolchain/clang/bin/arm-linux-gnueabi-
+          export CC=$HOME/toolchain/clang/bin/clang
+          export LD=$HOME/toolchain/clang/bin/ld.lld
+          export AR=$HOME/toolchain/clang/bin/llvm-ar
+          export NM=$HOME/toolchain/clang/bin/llvm-nm
+          export OBJCOPY=$HOME/toolchain/clang/bin/llvm-objcopy
+          export OBJDUMP=$HOME/toolchain/clang/bin/llvm-objdump
+          export READELF=$HOME/toolchain/clang/bin/llvm-readelf
+          export STRIP=$HOME/toolchain/clang/bin/llvm-strip
+          export HOSTCC=$HOME/toolchain/clang/bin/clang
+          export HOSTCXX=$HOME/toolchain/clang/bin/clang++
+          export HOSTAR=$HOME/toolchain/clang/bin/llvm-ar
+          export HOSTLD=$HOME/toolchain/clang/bin/ld.lld
           EOF
 
           chmod +x ~/WORKING_DIRECTORY/snapdragon_llvm.sh
@@ -152,7 +150,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: AGNi_haydn_MIUI_ST
           submodules: recursive
           fetch-depth: 1
 
@@ -190,16 +187,15 @@ jobs:
             zip \
             zlib1g-dev \
             wget \
-            curl \
-            openjdk-11-jdk
+            curl
 
       - name: Setup Clang Toolchain
         run: |
           mkdir -p ~/toolchain
           cd ~/toolchain
 
-          # Download Snapdragon LLVM Clang toolchain
-          echo "Downloading Snapdragon LLVM toolchain..."
+          # Download Google Clang toolchain from AOSP
+          echo "Downloading Google Clang toolchain..."
           wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r450784d.tar.gz -O clang.tar.gz
           mkdir -p clang
           tar -xzf clang.tar.gz -C clang
@@ -217,22 +213,22 @@ jobs:
           # Create snapdragon_llvm.sh configuration
           cat > ~/WORKING_DIRECTORY/snapdragon_llvm.sh << 'EOF'
           #!/bin/bash
-          export CROSS_COMPILE=~/toolchain/clang/bin/aarch64-linux-gnu-
-          export CROSS_COMPILE_ARM32=~/toolchain/clang/bin/arm-linux-gnueabi-
+          export CROSS_COMPILE=$HOME/toolchain/clang/bin/aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=$HOME/toolchain/clang/bin/arm-linux-gnueabi-
           export CLANG_TRIPLE=aarch64-linux-gnu-
-          export CROSS_COMPILE_COMPAT=~/toolchain/clang/bin/arm-linux-gnueabi-
-          export CC=~/toolchain/clang/bin/clang
-          export LD=~/toolchain/clang/bin/ld.lld
-          export AR=~/toolchain/clang/bin/llvm-ar
-          export NM=~/toolchain/clang/bin/llvm-nm
-          export OBJCOPY=~/toolchain/clang/bin/llvm-objcopy
-          export OBJDUMP=~/toolchain/clang/bin/llvm-objdump
-          export READELF=~/toolchain/clang/bin/llvm-readelf
-          export STRIP=~/toolchain/clang/bin/llvm-strip
-          export HOSTCC=~/toolchain/clang/bin/clang
-          export HOSTCXX=~/toolchain/clang/bin/clang++
-          export HOSTAR=~/toolchain/clang/bin/llvm-ar
-          export HOSTLD=~/toolchain/clang/bin/ld.lld
+          export CROSS_COMPILE_COMPAT=$HOME/toolchain/clang/bin/arm-linux-gnueabi-
+          export CC=$HOME/toolchain/clang/bin/clang
+          export LD=$HOME/toolchain/clang/bin/ld.lld
+          export AR=$HOME/toolchain/clang/bin/llvm-ar
+          export NM=$HOME/toolchain/clang/bin/llvm-nm
+          export OBJCOPY=$HOME/toolchain/clang/bin/llvm-objcopy
+          export OBJDUMP=$HOME/toolchain/clang/bin/llvm-objdump
+          export READELF=$HOME/toolchain/clang/bin/llvm-readelf
+          export STRIP=$HOME/toolchain/clang/bin/llvm-strip
+          export HOSTCC=$HOME/toolchain/clang/bin/clang
+          export HOSTCXX=$HOME/toolchain/clang/bin/clang++
+          export HOSTAR=$HOME/toolchain/clang/bin/llvm-ar
+          export HOSTLD=$HOME/toolchain/clang/bin/ld.lld
           EOF
 
           chmod +x ~/WORKING_DIRECTORY/snapdragon_llvm.sh
