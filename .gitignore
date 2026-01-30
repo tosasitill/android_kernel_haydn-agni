@@ -88,6 +88,7 @@ modules.order
 !.cocciconfig
 !.get_maintainer.ignore
 !.gitattributes
+!.github
 !.gitignore
 !.mailmap
 
