@@ -41,13 +41,13 @@ jobs:
       CPULLVM_URL: https://github.com/qualcomm/cpullvm-toolchain/releases/download/cpullvm-22.1.1/cpullvm-22.1.1-Linux-x86_64-Ubuntu24.tar.xz
     steps:
       - name: Checkout source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
         with:
           submodules: recursive
           fetch-depth: 1
 
       - name: Cache ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v5.0.5
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-haydn-${{ env.TOOLCHAIN }}-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
@@ -57,7 +57,7 @@ jobs:
 
       - name: Cache CPULLVM
         if: env.TOOLCHAIN == 'cpullvm'
-        uses: actions/cache@v5
+        uses: actions/cache@v5.0.5
         with:
           path: ${{ github.workspace }}/.toolchains/${{ env.CPULLVM_VERSION }}
           key: cpullvm-${{ env.CPULLVM_VERSION }}-${{ env.CPULLVM_SHA256 }}
@@ -104,7 +104,7 @@ jobs:
               bc bison build-essential ca-certificates ccache clang cpio curl flex \
               gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi git libelf-dev \
               libncurses-dev libssl-dev libyaml-dev lld llvm make \
-              python-is-python3 python3 rsync xz-utils zip \
+              python-is-python3 python3 python3-ply rsync xz-utils zip \
             && rm -rf /var/lib/apt/lists/*
           RUN useradd -m -u 1001 builder
           USER builder
@@ -205,7 +205,7 @@ jobs:
           zip -qr "$GITHUB_WORKSPACE/artifacts/$GITHUB_SHA/$MODE-$TOOLCHAIN.zip" .
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: AGNi_kernel_haydn_${{ env.MODE }}_${{ env.TOOLCHAIN }}_${{ github.sha }}
           path: ${{ github.workspace }}/artifacts/${{ github.sha }}/${{ env.MODE }}-${{ env.TOOLCHAIN }}.zip
@@ -213,7 +213,7 @@ jobs:
 
       - name: Upload build log
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: AGNi_kernel_haydn_build_log_${{ env.MODE }}_${{ env.TOOLCHAIN }}_${{ github.sha }}
           path: ${{ env.OUT_DIR }}/build.log
