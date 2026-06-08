@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 # Copyright (c) 2009-2015, 2017-19, The Linux Foundation. All rights reserved.
 
@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 import threading
-import Queue
+import queue
 
 version = 'build-all.py, version 1.99'
 
@@ -107,7 +107,7 @@ class BuildTracker:
         seq.set_width(self.longest)
         tok = self.build_tokens.get()
         with self.lock:
-            print "Building:", seq.short_name
+            print("Building:", seq.short_name)
         with seq:
             seq.run()
             self.results.put(seq.status)
@@ -115,12 +115,12 @@ class BuildTracker:
 
     def run(self):
         self.longest = self.longest_name()
-        self.results = Queue.Queue()
+        self.results = queue.Queue()
         children = []
         errors = []
-        self.build_tokens = Queue.Queue()
+        self.build_tokens = queue.Queue()
         nthreads = self.parallel_builds
-        print "Building with", nthreads, "threads"
+        print("Building with", nthreads, "threads")
         for i in range(nthreads):
             self.build_tokens.put(True)
         for seq in self.sequence:
@@ -132,7 +132,7 @@ class BuildTracker:
             if all_options.verbose:
                 with self.lock:
                     for line in stats.messages:
-                        print line
+                        print(line)
                     sys.stdout.flush()
             if stats.status:
                 errors.append(stats.status)
@@ -278,14 +278,14 @@ def scan_configs():
     return names
 
 def build_many(targets):
-    print "Building %d target(s)" % len(targets)
+    print("Building %d target(s)" % len(targets))
 
     # To try and make up for the link phase being serial, try to do
     # two full builds in parallel.  Don't do too many because lots of
     # parallel builds tends to use up available memory rather quickly.
     parallel = 2
     if all_options.jobs and all_options.jobs > 1:
-        j = max(all_options.jobs / parallel, 2)
+        j = max(all_options.jobs // parallel, 2)
         make_command.append("-j" + str(j))
 
     tracker = BuildTracker(parallel)
@@ -330,9 +330,9 @@ def main():
     all_options = options
 
     if options.list:
-        print "Available targets:"
+        print("Available targets:")
         for target in configs:
-            print "   %s" % target.name
+            print("   %s" % target.name)
         sys.exit(0)
 
     if options.make_target:

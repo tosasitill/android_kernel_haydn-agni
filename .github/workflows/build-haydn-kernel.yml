@@ -28,13 +28,13 @@ jobs:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 1
 
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-haydn-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
@@ -45,7 +45,7 @@ jobs:
       - name: Build Ubuntu Docker image
         run: |
           cat > /tmp/haydn-kernel-build.Dockerfile <<'DOCKER'
-          FROM ubuntu:20.04
+          FROM ubuntu:24.04
           ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
           RUN apt-get update && apt-get install -y --no-install-recommends \
               bc bison build-essential ca-certificates ccache clang cpio curl flex \
@@ -57,7 +57,7 @@ jobs:
           USER builder
           WORKDIR /work
           DOCKER
-          docker build -t haydn-kernel-build:ubuntu20.04 -f /tmp/haydn-kernel-build.Dockerfile /tmp
+          docker build -t haydn-kernel-build:ubuntu24.04 -f /tmp/haydn-kernel-build.Dockerfile /tmp
 
       - name: Prepare env
         run: |
@@ -76,7 +76,7 @@ jobs:
             -v "${OUT_DIR}:/out" \
             -v "${CCACHE_DIR}:/ccache" \
             -w /work \
-            haydn-kernel-build:ubuntu20.04 \
+            haydn-kernel-build:ubuntu24.04 \
             bash -lc '
               set -euxo pipefail
               export ARCH=arm64
@@ -137,7 +137,7 @@ jobs:
           zip -qr "$GITHUB_WORKSPACE/artifacts/$GITHUB_SHA/$MODE.zip" .
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AGNi_kernel_haydn_${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode || 'normal' }}_${{ github.sha }}
           path: ${{ github.workspace }}/artifacts/${{ github.sha }}/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode || 'normal' }}.zip
@@ -145,7 +145,7 @@ jobs:
 
       - name: Upload build log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AGNi_kernel_haydn_build_log_${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode || 'normal' }}_${{ github.sha }}
           path: ${{ env.OUT_DIR }}/build.log

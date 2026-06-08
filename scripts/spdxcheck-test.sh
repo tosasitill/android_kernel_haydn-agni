@@ -1,6 +1,8 @@
 #!/bin/sh
 
 for PYTHON in python2 python3; do
+	command -v "$PYTHON" >/dev/null 2>&1 || continue
+
 	# run check on a text and a binary file
 	for FILE in Makefile Documentation/logo.gif; do
 		$PYTHON scripts/spdxcheck.py $FILE
