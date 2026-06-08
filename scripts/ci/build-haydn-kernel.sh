@@ -73,13 +73,19 @@ ld.lld --version || true
 
 extra_kcflags=()
 warning_probe="${OUT_DIR}/.warning-probe.o"
-if printf '' | clang \
-	-Werror \
-	-Wunknown-warning-option \
-	-Wno-default-const-init-var-unsafe \
-	-x c -c -o "${warning_probe}" - >/dev/null 2>&1; then
-	extra_kcflags+=(-Wno-default-const-init-var-unsafe)
-fi
+for warning in \
+	default-const-init-var-unsafe \
+	default-const-init-field-unsafe \
+	uninitialized-const-pointer
+do
+	if printf '' | clang \
+		-Werror \
+		-Wunknown-warning-option \
+		"-Wno-${warning}" \
+		-x c -c -o "${warning_probe}" - >/dev/null 2>&1; then
+		extra_kcflags+=("-Wno-${warning}")
+	fi
+done
 rm -f "${warning_probe}"
 
 log "kernel version: ${version:-unknown}"
