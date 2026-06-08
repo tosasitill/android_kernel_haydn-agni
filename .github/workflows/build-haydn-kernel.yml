@@ -163,6 +163,8 @@ jobs:
                 O=/out
                 LLVM_IAS=1
                 DISABLE_WRAPPER=1
+                HOSTCC=gcc
+                HOSTCXX=g++
                 "REAL_CC=ccache clang"
                 LD=ld.lld
                 LD_COMPAT=ld.lld
