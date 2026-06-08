@@ -48,7 +48,7 @@ jobs:
           FROM ubuntu:20.04
           ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
           RUN apt-get update && apt-get install -y --no-install-recommends \
-              bc bison build-essential ca-certificates ccache clang flex \
+              bc bison build-essential ca-certificates ccache clang cpio curl flex \
               gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi git libelf-dev \
               libncurses-dev libssl-dev libyaml-dev lld llvm make \
               python-is-python3 python3 rsync xz-utils zip \
