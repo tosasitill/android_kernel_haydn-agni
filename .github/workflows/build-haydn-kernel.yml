@@ -108,7 +108,7 @@ jobs:
       - name: Build Ubuntu Docker image
         run: |
           cat > /tmp/haydn-kernel-build.Dockerfile <<'DOCKER'
-          FROM ubuntu:24.04
+          FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
           ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
           RUN apt-get update && apt-get install -y --no-install-recommends \
               bc bison build-essential ca-certificates ccache clang cpio curl flex \

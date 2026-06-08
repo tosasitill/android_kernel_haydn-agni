@@ -19,6 +19,11 @@ die() {
 boot_dir="${OUT_DIR}/arch/arm64/boot"
 mkdir -p "${ARTIFACT_DIR}"
 
+if [ ! -d "${OUT_DIR}" ]; then
+	log "output directory is missing; nothing to collect from ${OUT_DIR}"
+	exit 0
+fi
+
 copy_if_present() {
 	local src="$1"
 	local dst="$2"
