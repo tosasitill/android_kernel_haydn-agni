@@ -71,12 +71,24 @@ version="$(awk '
 clang --version
 ld.lld --version || true
 
+extra_kcflags=()
+warning_probe="${OUT_DIR}/.warning-probe.o"
+if printf '' | clang \
+	-Werror \
+	-Wunknown-warning-option \
+	-Wno-default-const-init-var-unsafe \
+	-x c -c -o "${warning_probe}" - >/dev/null 2>&1; then
+	extra_kcflags+=(-Wno-default-const-init-var-unsafe)
+fi
+rm -f "${warning_probe}"
+
 log "kernel version: ${version:-unknown}"
 log "toolchain: ${TOOLCHAIN}"
 log "defconfig: ${DEFCONFIG}"
 log "out dir: ${OUT_DIR}"
 log "build targets: ${BUILD_TARGETS}"
 log "disable LTO/CFI: ${DISABLE_LTO_CFI}"
+log "extra KCFLAGS: ${extra_kcflags[*]:-<none>}"
 
 make_args=(
 	O="${OUT_DIR}"
@@ -85,6 +97,9 @@ make_args=(
 	HOSTCC=gcc
 	HOSTCXX=g++
 )
+if [ "${#extra_kcflags[@]}" -gt 0 ]; then
+	make_args+=("KCFLAGS=${extra_kcflags[*]}")
+fi
 
 {
 	printf 'GITHUB_SHA=%s\n' "${GITHUB_SHA:-unknown}"
@@ -94,6 +109,7 @@ make_args=(
 	printf 'DEFCONFIG=%s\n' "${DEFCONFIG}"
 	printf 'BUILD_TARGETS=%s\n' "${BUILD_TARGETS}"
 	printf 'DISABLE_LTO_CFI=%s\n' "${DISABLE_LTO_CFI}"
+	printf 'KCFLAGS=%s\n' "${extra_kcflags[*]:-<none>}"
 } > "${OUT_DIR}/build-metadata.txt"
 
 log "running defconfig"
