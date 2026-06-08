@@ -21,11 +21,11 @@ if [ ! -f Makefile ] || [ ! -d arch/arm64 ]; then
 fi
 
 : "${TOOLCHAIN:=cpullvm}"
-: "${DEFCONFIG:=gki_defconfig}"
+: "${DEFCONFIG:=haydn_gki_defconfig}"
 : "${OUT_DIR:=/out}"
 : "${CCACHE_DIR:=/ccache}"
 : "${MAKE_JOBS:=$(nproc)}"
-: "${BUILD_TARGETS:=Image}"
+: "${BUILD_TARGETS:=Image dtbs}"
 : "${DISABLE_LTO_CFI:=1}"
 
 mkdir -p "${OUT_DIR}" "${CCACHE_DIR}"

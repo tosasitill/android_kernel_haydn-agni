@@ -13,12 +13,12 @@ on:
           - system-clang
       defconfig:
         description: arm64 defconfig to build
-        default: gki_defconfig
+        default: haydn_gki_defconfig
         required: false
         type: string
       build_targets:
         description: Space-separated make targets
-        default: Image
+        default: Image dtbs
         required: false
         type: string
       disable_lto_cfi:
@@ -34,13 +34,13 @@ permissions:
 
 jobs:
   build:
-    name: Build (${{ github.event_name == 'workflow_dispatch' && github.event.inputs.toolchain || 'cpullvm' }}, ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.defconfig || 'gki_defconfig' }})
+    name: Build (${{ github.event_name == 'workflow_dispatch' && github.event.inputs.toolchain || 'cpullvm' }}, ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.defconfig || 'haydn_gki_defconfig' }})
     runs-on: ubuntu-24.04
     timeout-minutes: 480
     env:
       TOOLCHAIN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.toolchain || 'cpullvm' }}
-      DEFCONFIG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.defconfig || 'gki_defconfig' }}
-      BUILD_TARGETS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_targets || 'Image' }}
+      DEFCONFIG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.defconfig || 'haydn_gki_defconfig' }}
+      BUILD_TARGETS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_targets || 'Image dtbs' }}
       DISABLE_LTO_CFI: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.disable_lto_cfi || 'true' }}
       OUT_DIR: ${{ github.workspace }}/OUTPUT
       CCACHE_DIR: ${{ github.workspace }}/.ccache
