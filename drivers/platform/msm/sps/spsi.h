@@ -113,24 +113,31 @@ extern u8 logging_option;
 extern u8 debug_level_option;
 extern u8 print_limit_option;
 
-#define SPS_IPC(idx, dev, msg, ...) do { \
-		if (dev) { \
-			if (idx == 0) \
-				ipc_log_string((dev)->ipc_log0, \
+#ifdef CONFIG_IPC_LOGGING
+#define SPS_IPC(idx, dev, msg, ...) do {				\
+		if (dev) {						\
+			if (idx == 0)					\
+				ipc_log_string((dev)->ipc_log0,		\
 					"%s: " msg, __func__, ##__VA_ARGS__); \
-			else if (idx == 1) \
-				ipc_log_string((dev)->ipc_log1, \
+			else if (idx == 1)				\
+				ipc_log_string((dev)->ipc_log1,		\
 					"%s: " msg, __func__, ##__VA_ARGS__); \
-			else if (idx == 2) \
-				ipc_log_string((dev)->ipc_log2, \
+			else if (idx == 2)				\
+				ipc_log_string((dev)->ipc_log2,		\
 					"%s: " msg, __func__, ##__VA_ARGS__); \
-			else if (idx == 3) \
-				ipc_log_string((dev)->ipc_log3, \
+			else if (idx == 3)				\
+				ipc_log_string((dev)->ipc_log3,		\
 					"%s: " msg, __func__, ##__VA_ARGS__); \
-			else if (idx == 4) \
-				ipc_log_string((dev)->ipc_log4, \
+			else if (idx == 4)				\
+				ipc_log_string((dev)->ipc_log4,		\
 					"%s: " msg, __func__, ##__VA_ARGS__); \
-		} \
+		}							\
+	} while (0)
+#define SPS_IPC_LEVEL(dev, level, idx, msg, ...) do {			\
+		if (dev) {						\
+			if ((dev)->ipc_loglevel <= (level))		\
+				SPS_IPC(idx, dev, msg, ##__VA_ARGS__);	\
+		}							\
 	} while (0)
 #define SPS_DUMP(msg, ...) do {					\
 		SPS_IPC(4, sps, msg, ##__VA_ARGS__); \
@@ -139,6 +146,13 @@ extern u8 print_limit_option;
 				pr_info("%s: " msg, __func__, ##__VA_ARGS__); \
 		} \
 	} while (0)
+#else
+#define SPS_IPC(idx, dev, msg, ...) do { } while (0)
+#define SPS_IPC_LEVEL(dev, level, idx, msg, ...) do { } while (0)
+#define SPS_DUMP(msg, ...) do {					\
+		pr_info("%s: " msg, __func__, ##__VA_ARGS__);		\
+	} while (0)
+#endif
 #define SPS_ERR(dev, msg, ...) do {					\
 		if (logging_option != 1) {	\
 			if (unlikely(print_limit_option > 2))	\
@@ -169,10 +183,7 @@ extern u8 print_limit_option;
 				pr_info("%s: " msg, __func__, ##__VA_ARGS__); \
 		} else	\
 			pr_debug("%s: " msg, __func__, ##__VA_ARGS__);	\
-		if (dev) { \
-			if ((dev)->ipc_loglevel <= 0)	\
-				SPS_IPC(0, dev, msg, ##__VA_ARGS__); \
-		}	\
+		SPS_IPC_LEVEL(dev, 0, 0, msg, ##__VA_ARGS__);	\
 	} while (0)
 #define SPS_DBG1(dev, msg, ...) do {				\
 		if ((unlikely(logging_option > 1))	\
@@ -184,10 +195,7 @@ extern u8 print_limit_option;
 				pr_info("%s: " msg, __func__, ##__VA_ARGS__); \
 		} else	\
 			pr_debug("%s: " msg, __func__, ##__VA_ARGS__);	\
-		if (dev) { \
-			if ((dev)->ipc_loglevel <= 1)	\
-				SPS_IPC(1, dev, msg, ##__VA_ARGS__);	\
-		}	\
+		SPS_IPC_LEVEL(dev, 1, 1, msg, ##__VA_ARGS__);	\
 	} while (0)
 #define SPS_DBG2(dev, msg, ...) do {				\
 		if ((unlikely(logging_option > 1))	\
@@ -199,10 +207,7 @@ extern u8 print_limit_option;
 				pr_info("%s: " msg, __func__, ##__VA_ARGS__); \
 		} else	\
 			pr_debug("%s: " msg, __func__, ##__VA_ARGS__);	\
-		if (dev) { \
-			if ((dev)->ipc_loglevel <= 2)	\
-				SPS_IPC(2, dev, msg, ##__VA_ARGS__); \
-		}	\
+		SPS_IPC_LEVEL(dev, 2, 2, msg, ##__VA_ARGS__);	\
 	} while (0)
 #define SPS_DBG3(dev, msg, ...) do {				\
 		if ((unlikely(logging_option > 1))	\
@@ -214,10 +219,7 @@ extern u8 print_limit_option;
 				pr_info("%s: " msg, __func__, ##__VA_ARGS__); \
 		} else	\
 			pr_debug("%s: " msg, __func__, ##__VA_ARGS__);	\
-		if (dev) { \
-			if ((dev)->ipc_loglevel <= 3)	\
-				SPS_IPC(3, dev, msg, ##__VA_ARGS__); \
-		}	\
+		SPS_IPC_LEVEL(dev, 3, 3, msg, ##__VA_ARGS__);	\
 	} while (0)
 #else
 #define SPS_DBG3(dev, msg, args...)
@@ -228,6 +230,7 @@ extern u8 print_limit_option;
 #define SPS_ERR(dev, msg, args...)
 #define SPS_DUMP(msg, args...)
 #define SPS_IPC(idx, dev, msg, ...)
+#define SPS_IPC_LEVEL(dev, level, idx, msg, ...)
 #endif
 
 /* End point parameters */
