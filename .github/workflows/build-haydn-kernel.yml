@@ -1,0 +1,170 @@
+name: Build Haydn 5.10 Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      toolchain:
+        description: Compiler toolchain
+        default: cpullvm
+        required: false
+        type: choice
+        options:
+          - cpullvm
+          - system-clang
+      defconfig:
+        description: arm64 defconfig to build
+        default: gki_defconfig
+        required: false
+        type: string
+      build_targets:
+        description: Space-separated make targets
+        default: Image
+        required: false
+        type: string
+      disable_lto_cfi:
+        description: Disable LTO and CFI for 5.10 bring-up builds
+        default: true
+        required: false
+        type: boolean
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ github.event_name == 'workflow_dispatch' && github.event.inputs.toolchain || 'cpullvm' }}, ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.defconfig || 'gki_defconfig' }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 480
+    env:
+      TOOLCHAIN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.toolchain || 'cpullvm' }}
+      DEFCONFIG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.defconfig || 'gki_defconfig' }}
+      BUILD_TARGETS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_targets || 'Image' }}
+      DISABLE_LTO_CFI: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.disable_lto_cfi || 'true' }}
+      OUT_DIR: ${{ github.workspace }}/OUTPUT
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CPULLVM_VERSION: cpullvm-22.1.1
+      CPULLVM_ARCHIVE: cpullvm-22.1.1-Linux-x86_64-Ubuntu24.tar.xz
+      CPULLVM_SHA256: eb8544e61ffdd1bc8abbd5f13b65d272eb54e12f9ae9079c4431c4928d1d1129
+      CPULLVM_URL: https://github.com/qualcomm/cpullvm-toolchain/releases/download/cpullvm-22.1.1/cpullvm-22.1.1-Linux-x86_64-Ubuntu24.tar.xz
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-haydn510-${{ env.TOOLCHAIN }}-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-haydn510-${{ env.TOOLCHAIN }}-${{ runner.os }}-${{ github.ref_name }}-
+            ccache-haydn510-${{ env.TOOLCHAIN }}-${{ runner.os }}-
+
+      - name: Cache CPULLVM
+        if: env.TOOLCHAIN == 'cpullvm'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.toolchains/${{ env.CPULLVM_VERSION }}
+          key: cpullvm-${{ env.CPULLVM_VERSION }}-${{ env.CPULLVM_SHA256 }}
+
+      - name: Install CPULLVM
+        if: env.TOOLCHAIN == 'cpullvm'
+        run: |
+          set -euxo pipefail
+          root="${GITHUB_WORKSPACE}/.toolchains/${CPULLVM_VERSION}"
+          mkdir -p "${root}"
+
+          if ! find "${root}" -type f \( -path '*/bin/clang' -o -path '*/bin/clang-22' \) -print -quit | grep -q .; then
+            archive="/tmp/${CPULLVM_ARCHIVE}"
+            curl -L --retry 5 --retry-delay 5 --fail -o "${archive}" "${CPULLVM_URL}"
+            echo "${CPULLVM_SHA256}  ${archive}" | sha256sum -c -
+            rm -rf "${root:?}"/*
+            tar -xf "${archive}" -C "${root}"
+          fi
+
+          clang_path="$(find "${root}" -type f \( -path '*/bin/clang' -o -path '*/bin/clang-22' \) -print -quit)"
+          if [ -z "${clang_path}" ]; then
+            echo "CPULLVM clang not found under ${root}"
+            find "${root}" -maxdepth 4 -type f | sort | head -n 100
+            exit 1
+          fi
+
+          host_bin="$(dirname "${clang_path}")"
+          if [ ! -e "${host_bin}/clang" ]; then
+            ln -s "$(basename "${clang_path}")" "${host_bin}/clang"
+          fi
+          if [ ! -e "${host_bin}/ld.lld" ] && [ -e "${host_bin}/lld" ]; then
+            ln -s lld "${host_bin}/ld.lld"
+          fi
+
+          rel_bin="${host_bin#${GITHUB_WORKSPACE}/}"
+          echo "CPULLVM_BIN=/work/${rel_bin}" >> "${GITHUB_ENV}"
+          "${clang_path}" --version
+
+      - name: Build Ubuntu Docker image
+        run: |
+          cat > /tmp/haydn-kernel-build.Dockerfile <<'DOCKER'
+          FROM ubuntu:24.04
+          ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+          RUN apt-get update && apt-get install -y --no-install-recommends \
+              bc bison build-essential ca-certificates ccache clang cpio curl flex \
+              gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi git libelf-dev \
+              libncurses-dev libssl-dev libyaml-dev lld llvm make \
+              python-is-python3 python3 python3-ply rsync xz-utils zip \
+            && rm -rf /var/lib/apt/lists/*
+          RUN useradd -m -u 1001 builder
+          USER builder
+          WORKDIR /work
+          DOCKER
+          docker build -t haydn-kernel-build:ubuntu24.04 -f /tmp/haydn-kernel-build.Dockerfile /tmp
+
+      - name: Prepare output
+        run: |
+          set -euxo pipefail
+          rm -rf "${OUT_DIR}"
+          mkdir -p "${OUT_DIR}" "${CCACHE_DIR}"
+
+      - name: Build kernel in Ubuntu Docker
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            -e GITHUB_ACTIONS="${GITHUB_ACTIONS}" \
+            -e GITHUB_SHA="${GITHUB_SHA}" \
+            -e GITHUB_REF="${GITHUB_REF}" \
+            -e TOOLCHAIN="${TOOLCHAIN}" \
+            -e DEFCONFIG="${DEFCONFIG}" \
+            -e BUILD_TARGETS="${BUILD_TARGETS}" \
+            -e DISABLE_LTO_CFI="${DISABLE_LTO_CFI}" \
+            -e CPULLVM_BIN="${CPULLVM_BIN:-}" \
+            -e OUT_DIR=/out \
+            -e CCACHE_DIR=/ccache \
+            -v "${GITHUB_WORKSPACE}:/work" \
+            -v "${OUT_DIR}:/out" \
+            -v "${CCACHE_DIR}:/ccache" \
+            -w /work \
+            haydn-kernel-build:ubuntu24.04 \
+            bash scripts/ci/build-haydn-kernel.sh
+
+          test -f "${OUT_DIR}/arch/arm64/boot/Image"
+
+      - name: Collect kernel artifacts
+        if: always()
+        run: |
+          set -euxo pipefail
+          artifact_dir="$GITHUB_WORKSPACE/artifacts/$GITHUB_SHA/${TOOLCHAIN}"
+          ARTIFACT_DIR="${artifact_dir}" \
+          OUT_DIR="${OUT_DIR}" \
+          TOOLCHAIN="${TOOLCHAIN}" \
+          bash scripts/ci/collect-haydn-artifacts.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: haydn510_kernel_${{ env.TOOLCHAIN }}_${{ github.sha }}
+          path: ${{ github.workspace }}/artifacts/${{ github.sha }}/**
+          if-no-files-found: ignore
