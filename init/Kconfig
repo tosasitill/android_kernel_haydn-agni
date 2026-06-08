@@ -1298,12 +1298,12 @@ config CC_OPTIMIZE_FOR_PERFORMANCE_O3
 	  the kernel yet more for performance.
 
 config CC_OPTIMIZE_FOR_PERFORMANCE_QC_LLVM
-	bool "Optimize more for high performance (-Ofast)"
+	bool "Optimize more for high performance (-O3 -ffast-math)"
 	help
-	  Choosing this option will pass "-Ofast" to your compiler to optimize
-	  the kernel yet more for recommended optimization level for best
-	  performance. Enables all high performance features including 
-	  auto vectorization
+	  Choosing this option will pass "-O3 -ffast-math" to your compiler to
+	  optimize the kernel yet more for the recommended optimization level for
+	  best performance. Enables high performance features including auto
+	  vectorization.
 
 config CC_OPTIMIZE_FOR_SIZE
 	bool "Optimize for size (-Os)"
