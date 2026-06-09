@@ -4287,6 +4287,7 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool is_error,
 	struct dsi_bridge *c_bridge = NULL;
 	struct dsi_display *dsi_display = NULL;
 	struct dsi_display_mode adj_mode;
+	struct drm_bridge *bridge;
 	unsigned int i;
 
 	if (!drm_enc) {
@@ -4298,15 +4299,20 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool is_error,
 
 	SDE_DEBUG_ENC(sde_enc, "\n");
 
-	if (sde_enc->disp_info.intf_type == DRM_MODE_CONNECTOR_DSI && drm_enc->bridge) {
-		c_bridge = container_of(drm_enc->bridge, struct dsi_bridge, base);
+	if (sde_enc->disp_info.intf_type == DRM_MODE_CONNECTOR_DSI) {
+		bridge = drm_bridge_chain_get_first_bridge(drm_enc);
+		if (!bridge)
+			goto skip_dsi_bridge;
+
+		c_bridge = container_of(bridge, struct dsi_bridge, base);
 		if (c_bridge) {
 			dsi_display = c_bridge->display;
 			adj_mode = c_bridge->dsi_mode;
 		} else {
-			DSI_ERR("Failed to get valid dsi_bridge from drm_enc->bridge\n");
+			DSI_ERR("Failed to get valid dsi_bridge from bridge chain\n");
 		}
 	}
+skip_dsi_bridge:
 
 	/* create a 'no pipes' commit to release buffers on errors */
 	if (is_error)
