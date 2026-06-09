@@ -917,11 +917,8 @@ static void wm_adsp2_init_debugfs(struct wm_adsp *dsp,
 	if (!debugfs_create_bool("running", 0444, root, &dsp->running))
 		goto err;
 
-	if (!debugfs_create_x32("fw_id", 0444, root, &dsp->fw_id))
-		goto err;
-
-	if (!debugfs_create_x32("fw_version", 0444, root, &dsp->fw_id_version))
-		goto err;
+	debugfs_create_x32("fw_id", 0444, root, &dsp->fw_id);
+	debugfs_create_x32("fw_version", 0444, root, &dsp->fw_id_version);
 
 	for (i = 0; i < ARRAY_SIZE(wm_adsp_debugfs_fops); ++i) {
 		if (!debugfs_create_file(wm_adsp_debugfs_fops[i].name,
