@@ -145,6 +145,9 @@ if [ -n "${VENDOR_CONFIG}" ]; then
 	make -j"${MAKE_JOBS}" "${make_args[@]}" olddefconfig 2>&1 | tee -a "${OUT_DIR}/defconfig.log"
 fi
 
+log "selected hardware stack config"
+grep -E 'CONFIG_(DISPLAY_BUILD|DRM_MSM|DRM_MSM_SDE|DRM_MSM_DSI|DRM_MSM_DP|DRM_SDE_WB|DRM_SDE_RSC|QCOM_MDSS_PLL|DSI_PARSER|SPECTRA_CAMERA|QCA_CLD_WLAN|CNSS2|CNSS_QCA6490|SND_SOC_CS35L41|TOUCHSCREEN_(FTS|FOCALTECH|SYNAPTICS_DSX))=' "${OUT_DIR}/.config" | sort | tee -a "${OUT_DIR}/defconfig.log" || true
+
 log "restricting SoC target to Lahaina/Haydn bring-up"
 scripts/config --file "${OUT_DIR}/.config" \
 	-e ARCH_LAHAINA \
