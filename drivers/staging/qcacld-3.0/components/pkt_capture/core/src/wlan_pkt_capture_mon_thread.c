@@ -26,6 +26,7 @@
 #include "wlan_mgmt_txrx_utils_api.h"
 #include "cfg_ucfg_api.h"
 #include "wlan_mgmt_txrx_utils_api.h"
+#include "qdf_threads.h"
 
 void pkt_capture_mon(struct pkt_capture_cb_context *cb_ctx, qdf_nbuf_t msdu,
 		     struct wlan_objmgr_vdev *vdev, uint16_t ch_freq)
@@ -252,7 +253,7 @@ static int pkt_capture_mon_thread(void *arg)
 	mon_ctx = (struct pkt_capture_mon_context *)arg;
 	set_user_nice(current, -1);
 #ifdef MSM_PLATFORM
-	set_wake_up_idle(true);
+	qdf_set_wake_up_idle(true);
 #endif
 
 	/**

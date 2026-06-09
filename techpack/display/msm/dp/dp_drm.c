@@ -59,7 +59,8 @@ void convert_to_drm_mode(const struct dp_display_mode *dp_mode,
 	drm_mode_set_name(drm_mode);
 }
 
-static int dp_bridge_attach(struct drm_bridge *dp_bridge)
+static int dp_bridge_attach(struct drm_bridge *dp_bridge,
+		enum drm_bridge_attach_flags flags)
 {
 	struct dp_bridge *bridge = to_dp_bridge(dp_bridge);
 
@@ -616,7 +617,7 @@ int dp_drm_bridge_init(void *data, struct drm_encoder *encoder,
 
 	priv = dev->dev_private;
 
-	rc = drm_bridge_attach(encoder, &bridge->base, NULL);
+	rc = drm_bridge_attach(encoder, &bridge->base, NULL, 0);
 	if (rc) {
 		DP_ERR("failed to attach bridge, rc=%d\n", rc);
 		goto error_free_bridge;
@@ -628,7 +629,6 @@ int dp_drm_bridge_init(void *data, struct drm_encoder *encoder,
 		goto error_free_bridge;
 	}
 
-	encoder->bridge = &bridge->base;
 	priv->bridges[priv->num_bridges++] = &bridge->base;
 	display->bridge = bridge;
 	display->max_mixer_count = max_mixer_count;
@@ -646,10 +646,12 @@ void dp_drm_bridge_deinit(void *data)
 	struct dp_display *display = data;
 	struct dp_bridge *bridge = display->bridge;
 
-	if (bridge && bridge->base.encoder)
-		bridge->base.encoder->bridge = NULL;
-
-	kfree(bridge);
+	if (bridge) {
+		if (bridge->base.dev)
+			drm_bridge_detach(&bridge->base);
+		kfree(bridge);
+		display->bridge = NULL;
+	}
 }
 
 enum drm_mode_status dp_connector_mode_valid(struct drm_connector *connector,
