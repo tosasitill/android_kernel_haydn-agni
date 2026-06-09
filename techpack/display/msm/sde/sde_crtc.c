@@ -4998,11 +4998,11 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 {
 	struct drm_device *dev;
 	struct sde_crtc *sde_crtc;
-	struct plane_state pstates[SDE_PSTATES_MAX];
+	struct plane_state *pstates = NULL;
 	struct sde_crtc_state *cstate;
 	struct drm_display_mode *mode;
 	int rc = 0;
-	struct sde_multirect_plane_states multirect_plane[SDE_MULTIRECT_PLANE_MAX];
+	struct sde_multirect_plane_states *multirect_plane = NULL;
 	struct drm_connector *conn;
 	struct drm_connector_list_iter conn_iter;
 
@@ -5056,6 +5056,19 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 	_sde_crtc_setup_is_ppsplit(state);
 	_sde_crtc_setup_lm_bounds(crtc, state);
 
+	pstates = kcalloc(SDE_PSTATES_MAX, sizeof(*pstates), GFP_KERNEL);
+	if (!pstates) {
+		rc = -ENOMEM;
+		goto end;
+	}
+
+	multirect_plane = kcalloc(SDE_MULTIRECT_PLANE_MAX,
+			sizeof(*multirect_plane), GFP_KERNEL);
+	if (!multirect_plane) {
+		rc = -ENOMEM;
+		goto end;
+	}
+
 	rc = _sde_crtc_atomic_check_pstates(crtc, state, pstates,
 			multirect_plane);
 	if (rc) {
@@ -5083,6 +5096,8 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 		goto end;
 	}
 end:
+	kfree(multirect_plane);
+	kfree(pstates);
 	return rc;
 }
 
