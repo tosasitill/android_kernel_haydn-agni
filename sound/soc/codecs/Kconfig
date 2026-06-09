@@ -570,6 +570,20 @@ config SND_SOC_CS35L36
 	tristate "Cirrus Logic CS35L36 CODEC"
 	depends on I2C
 
+config SND_SOC_CS35L41
+	tristate "Cirrus Logic CS35L41 CODEC"
+	depends on I2C
+	select REGMAP_I2C
+	select SND_SOC_COMPRESS
+
+config AUDIO_SMARTPA_STEREO
+	bool "Xiaomi stereo SmartPA tuning for CS35L41"
+	depends on SND_SOC_CS35L41
+
+config TARGET_PRODUCT_CS35L41_TDM
+	bool "Xiaomi TDM routing for CS35L41"
+	depends on SND_SOC_CS35L41
+
 config SND_SOC_CS42L42
 	tristate "Cirrus Logic CS42L42 CODEC"
 	depends on I2C
