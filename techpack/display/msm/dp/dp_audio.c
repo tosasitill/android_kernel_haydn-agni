@@ -4,7 +4,7 @@
  */
 
 #include <linux/of_platform.h>
-#include <linux/msm_ext_display.h>
+#include <linux/soc/qcom/msm_ext_display.h>
 
 #include <drm/drm_dp_helper.h>
 
