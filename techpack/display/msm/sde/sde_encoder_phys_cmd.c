@@ -12,9 +12,12 @@
 #include "sde_trace.h"
 #include "mi_sde_encoder.h"
 
-#define SDE_DEBUG_CMDENC(e, fmt, ...)
+#define SDE_DEBUG_CMDENC(e, fmt, ...) do { (void)(e); } while (0)
 
-#define SDE_ERROR_CMDENC(e, fmt, ...)
+#define SDE_ERROR_CMDENC(e, fmt, ...) do { \
+	(void)(e); \
+	SDE_ERROR(fmt, ##__VA_ARGS__); \
+} while (0)
 
 #define to_sde_encoder_phys_cmd(x) \
 	container_of(x, struct sde_encoder_phys_cmd, base)
