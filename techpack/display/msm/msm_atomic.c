@@ -22,6 +22,7 @@
 #include "msm_kms.h"
 #include "sde_trace.h"
 #include <drm/drm_atomic_uapi.h>
+#include <drm/drm_bridge.h>
 
 #define MULTIPLE_CONN_DETECTED(x) (x > 1)
 
@@ -164,6 +165,7 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 			old_conn_state, i) {
 		const struct drm_encoder_helper_funcs *funcs;
 		struct drm_encoder *encoder;
+		struct drm_bridge *bridge;
 
 		/*
 		 * Shut down everything that's in the changeset and currently
@@ -199,7 +201,8 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 		 * Each encoder has at most one connector (since we always steal
 		 * it away), so we won't call disable hooks twice.
 		 */
-		drm_bridge_disable(encoder->bridge);
+		bridge = drm_bridge_chain_get_first_bridge(encoder);
+		drm_bridge_chain_disable(bridge);
 
 		/* Right function depends upon target state. */
 		if (connector->state->crtc && funcs->prepare)
@@ -209,7 +212,7 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 		else
 			funcs->dpms(encoder, DRM_MODE_DPMS_OFF);
 
-		drm_bridge_post_disable(encoder->bridge);
+		drm_bridge_chain_post_disable(bridge);
 	}
 
 	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
@@ -272,6 +275,7 @@ msm_crtc_set_mode(struct drm_device *dev, struct drm_atomic_state *old_state)
 		struct drm_crtc_state *new_crtc_state;
 		struct drm_encoder *encoder;
 		struct drm_display_mode *mode, *adjusted_mode;
+		struct drm_bridge *bridge;
 
 		if (!connector->state->best_encoder)
 			continue;
@@ -305,7 +309,8 @@ msm_crtc_set_mode(struct drm_device *dev, struct drm_atomic_state *old_state)
 		if (funcs->mode_set)
 			funcs->mode_set(encoder, mode, adjusted_mode);
 
-		drm_bridge_mode_set(encoder->bridge, mode, adjusted_mode);
+		bridge = drm_bridge_chain_get_first_bridge(encoder);
+		drm_bridge_chain_mode_set(bridge, mode, adjusted_mode);
 		SDE_ATRACE_END("msm_set_mode");
 	}
 }
@@ -399,6 +404,7 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 		const struct drm_encoder_helper_funcs *funcs;
 		struct drm_encoder *encoder;
 		struct drm_connector_state *old_conn_state;
+		struct drm_bridge *bridge;
 
 		if (!new_conn_state->best_encoder)
 			continue;
@@ -423,7 +429,8 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 		 * Each encoder has at most one connector (since we always steal
 		 * it away), so we won't call enable hooks twice.
 		 */
-		drm_bridge_pre_enable(encoder->bridge);
+		bridge = drm_bridge_chain_get_first_bridge(encoder);
+		drm_bridge_chain_pre_enable(bridge);
 		++bridge_enable_count;
 
 		if (funcs->enable)
@@ -447,6 +454,7 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 			new_conn_state, i) {
 		struct drm_encoder *encoder;
 		struct drm_connector_state *old_conn_state;
+		struct drm_bridge *bridge;
 
 		if (!new_conn_state->best_encoder)
 			continue;
@@ -466,7 +474,8 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 		DRM_DEBUG_ATOMIC("bridge enable enabling [ENCODER:%d:%s]\n",
 				 encoder->base.id, encoder->name);
 
-		drm_bridge_enable(encoder->bridge);
+		bridge = drm_bridge_chain_get_first_bridge(encoder);
+		drm_bridge_chain_enable(bridge);
 	}
 	SDE_ATRACE_END("msm_enable");
 }

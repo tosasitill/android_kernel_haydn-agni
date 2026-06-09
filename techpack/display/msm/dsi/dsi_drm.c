@@ -6,6 +6,7 @@
 
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_atomic.h>
+#include <drm/drm_bridge.h>
 #include <drm/mi_disp_notifier.h>
 #include <linux/pm_wakeup.h>
 
@@ -164,7 +165,8 @@ void dsi_convert_to_drm_mode(const struct dsi_display_mode *dsi_mode,
 			video_mode ? "vid" : "cmd");
 }
 
-static int dsi_bridge_attach(struct drm_bridge *bridge)
+static int dsi_bridge_attach(struct drm_bridge *bridge,
+		enum drm_bridge_attach_flags flags)
 {
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
 
@@ -173,6 +175,7 @@ static int dsi_bridge_attach(struct drm_bridge *bridge)
 		return -EINVAL;
 	}
 
+	(void)flags;
 	DSI_DEBUG("[%d] attached\n", c_bridge->id);
 
 	return 0;
@@ -1274,6 +1277,7 @@ int dsi_conn_post_kickoff(struct drm_connector *connector,
 	struct msm_display_conn_params *params)
 {
 	struct drm_encoder *encoder;
+	struct drm_bridge *bridge;
 	struct dsi_bridge *c_bridge;
 	struct dsi_display_mode adj_mode;
 	struct dsi_display *display;
@@ -1293,7 +1297,13 @@ int dsi_conn_post_kickoff(struct drm_connector *connector,
 		return 0;
 	}
 
-	c_bridge = to_dsi_bridge(encoder->bridge);
+	bridge = drm_bridge_chain_get_first_bridge(encoder);
+	if (!bridge) {
+		DSI_ERR("No bridge attached to encoder\n");
+		return -EINVAL;
+	}
+
+	c_bridge = to_dsi_bridge(bridge);
 	adj_mode = c_bridge->dsi_mode;
 	display = c_bridge->display;
 	dyn_clk_caps = &(display->panel->dyn_clk_caps);
@@ -1375,13 +1385,12 @@ struct dsi_bridge *dsi_drm_bridge_init(struct dsi_display *display,
 	bridge->base.funcs = &dsi_bridge_ops;
 	bridge->base.encoder = encoder;
 
-	rc = drm_bridge_attach(encoder, &bridge->base, NULL);
+	rc = drm_bridge_attach(encoder, &bridge->base, NULL, 0);
 	if (rc) {
 		DSI_ERR("failed to attach bridge, rc=%d\n", rc);
 		goto error_free_bridge;
 	}
 
-	encoder->bridge = &bridge->base;
 	bridge->is_dsi_drm_bridge = true;
 	mutex_init(&bridge->lock);
 
@@ -1412,9 +1421,6 @@ error:
 
 void dsi_drm_bridge_cleanup(struct dsi_bridge *bridge)
 {
-	if (bridge && bridge->base.encoder)
-		bridge->base.encoder->bridge = NULL;
-
 	if (bridge == gbridge) {
 		atomic_set(&prim_panel_is_on, false);
 		cancel_delayed_work_sync(&prim_panel_work);
