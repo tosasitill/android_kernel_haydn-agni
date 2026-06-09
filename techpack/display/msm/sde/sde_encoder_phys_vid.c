@@ -1004,8 +1004,6 @@ static void sde_encoder_phys_vid_single_vblank_wait(
 		struct sde_encoder_phys *phys_enc)
 {
 	int ret;
-	struct sde_encoder_phys_vid *vid_enc
-					= to_sde_encoder_phys_vid(phys_enc);
 
 	/*
 	 * Wait for a vsync so we know the ENABLE=0 latched before
@@ -1017,9 +1015,7 @@ static void sde_encoder_phys_vid_single_vblank_wait(
 	 */
 	ret = sde_encoder_phys_vid_control_vblank_irq(phys_enc, true);
 	if (ret) {
-		SDE_ERROR_VIDENC(vid_enc,
-				"failed to enable vblank irq: %d\n",
-				ret);
+		SDE_ERROR("failed to enable vblank irq: %d\n", ret);
 		SDE_EVT32(DRMID(phys_enc->parent),
 				phys_enc->hw_intf->idx - INTF_0, ret,
 				SDE_EVTLOG_FUNC_CASE1,
@@ -1028,9 +1024,7 @@ static void sde_encoder_phys_vid_single_vblank_wait(
 		ret = _sde_encoder_phys_vid_wait_for_vblank(phys_enc, false);
 		if (ret) {
 			atomic_set(&phys_enc->pending_kickoff_cnt, 0);
-			SDE_ERROR_VIDENC(vid_enc,
-					"failure waiting for disable: %d\n",
-					ret);
+			SDE_ERROR("failure waiting for disable: %d\n", ret);
 			SDE_EVT32(DRMID(phys_enc->parent),
 					phys_enc->hw_intf->idx - INTF_0, ret,
 					SDE_EVTLOG_FUNC_CASE2,
