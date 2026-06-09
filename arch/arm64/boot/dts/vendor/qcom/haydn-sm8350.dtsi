@@ -130,18 +130,23 @@ And public attribution of xiaomi platforms(like venus and so and)
 };
 
 &qupv3_se1_spi {
-        status = "ok";
-        ir-spi@0 {
-                compatible = "ir-spi";
-                reg = <0>;
-                spi-max-frequency = <19200000>;
-                status = "ok";
-        };
+	status = "ok";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	ir-spi@0 {
+		compatible = "ir-spi";
+		reg = <0>;
+		spi-max-frequency = <19200000>;
+		status = "ok";
+	};
 };
 
 &qupv3_se11_spi {
 	status = "ok";
 	qcom,spi-touch-active = "focaltech,fts_ts";
+	#address-cells = <1>;
+	#size-cells = <0>;
 
 	pinctrl-0 = <&qupv3_se11_spi_active &ts_cs_active>;
 	pinctrl-1 = <&qupv3_se11_spi_sleep &ts_cs_suspend>;
@@ -199,6 +204,9 @@ And public attribution of xiaomi platforms(like venus and so and)
 
 &qupv3_se8_i2c {
 	status = "ok";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	cs35l41_1: cs35l41@40 {
 		status = "ok";
 		compatible = "cirrus,cs35l41";

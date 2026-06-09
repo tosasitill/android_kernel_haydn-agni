@@ -136,6 +136,7 @@
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
 			#size-cells = <0>;
+			interrupt-parent = <&intc>;
 			clock-names = "lpass_core_hw_vote",
 					"lpass_audio_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>,
@@ -180,6 +181,7 @@
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
 			#size-cells = <0>;
+			interrupt-parent = <&intc>;
 			clock-names = "lpass_core_hw_vote",
 					"lpass_audio_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>,

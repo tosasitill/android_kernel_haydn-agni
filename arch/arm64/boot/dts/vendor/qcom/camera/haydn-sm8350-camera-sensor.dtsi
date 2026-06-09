@@ -96,9 +96,8 @@
 		status = "ok";
 	};
 
-	camera_wide_vana_ldo: gpio-regulator@0 {
+	camera_wide_vana_ldo: camera-wide-vana-ldo {
 		compatible = "regulator-fixed";
-		reg = <0x00 0x00>;
 		regulator-name = "camera_wide_vana_ldo";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
