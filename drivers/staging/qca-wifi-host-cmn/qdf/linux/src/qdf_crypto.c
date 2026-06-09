@@ -26,6 +26,7 @@
 #include "qdf_crypto.h"
 #include <linux/export.h>
 #include <crypto/hash.h>
+#include <crypto/internal/cipher.h>
 #include <crypto/aes.h>
 #include <crypto/skcipher.h>
 #include <crypto/aead.h>
