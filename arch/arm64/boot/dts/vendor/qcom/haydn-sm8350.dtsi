@@ -513,14 +513,20 @@ And public attribution of xiaomi platforms(like venus and so and)
 	};
 };
 
-&removed_mem {
-	reg = <0x0 0xd8800000 0x0 0x5400000>;
-};
+&reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	ranges;
 
-&splash_memory {
-	reg = <0x0 0xdfc00000 0x0 0x02300000>;
-};
+	removed_region@d8800000 {
+		reg = <0x0 0xd8800000 0x0 0x5400000>;
+	};
 
-&dfps_data_memory {
-	reg = <0x0 0xe1f00000 0x0 0x0100000>;
+	splash_region {
+		reg = <0x0 0xdfc00000 0x0 0x02300000>;
+	};
+
+	dfps_data_region {
+		reg = <0x0 0xe1f00000 0x0 0x0100000>;
+	};
 };
