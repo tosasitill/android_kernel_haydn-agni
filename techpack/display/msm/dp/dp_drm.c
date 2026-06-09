@@ -647,8 +647,11 @@ void dp_drm_bridge_deinit(void *data)
 	struct dp_bridge *bridge = display->bridge;
 
 	if (bridge) {
-		if (bridge->base.dev)
-			drm_bridge_detach(&bridge->base);
+		if (bridge->base.dev) {
+			list_del(&bridge->base.chain_node);
+			bridge->base.encoder = NULL;
+			bridge->base.dev = NULL;
+		}
 		kfree(bridge);
 		display->bridge = NULL;
 	}
