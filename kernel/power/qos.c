@@ -222,6 +222,7 @@ static struct pm_qos_constraints cpu_latency_constraints = {
 	.no_constraint_value = PM_QOS_CPU_LATENCY_DEFAULT_VALUE,
 	.type = PM_QOS_MIN,
 };
+static BLOCKING_NOTIFIER_HEAD(cpu_latency_notifiers);
 
 /**
  * cpu_latency_qos_limit - Return current system-wide CPU latency QoS limit.
@@ -230,6 +231,29 @@ s32 cpu_latency_qos_limit(void)
 {
 	return pm_qos_read_value(&cpu_latency_constraints);
 }
+
+/**
+ * cpu_latency_qos_add_notifier - Register a CPU latency QoS notifier.
+ * @notifier: Notifier block managed by caller.
+ *
+ * Register for notifications when the aggregate CPU latency QoS value changes.
+ */
+int cpu_latency_qos_add_notifier(struct notifier_block *notifier)
+{
+	return blocking_notifier_chain_register(&cpu_latency_notifiers, notifier);
+}
+EXPORT_SYMBOL_GPL(cpu_latency_qos_add_notifier);
+
+/**
+ * cpu_latency_qos_remove_notifier - Unregister a CPU latency QoS notifier.
+ * @notifier: Notifier block to remove.
+ */
+int cpu_latency_qos_remove_notifier(struct notifier_block *notifier)
+{
+	return blocking_notifier_chain_unregister(&cpu_latency_notifiers,
+						 notifier);
+}
+EXPORT_SYMBOL_GPL(cpu_latency_qos_remove_notifier);
 
 /**
  * cpu_latency_qos_request_active - Check the given PM QoS request.
@@ -248,8 +272,11 @@ static void cpu_latency_qos_apply(struct pm_qos_request *req,
 				  enum pm_qos_req_action action, s32 value)
 {
 	int ret = pm_qos_update_target(req->qos, &req->node, action, value);
-	if (ret > 0)
+	if (ret > 0) {
+		blocking_notifier_call_chain(&cpu_latency_notifiers,
+					     cpu_latency_qos_limit(), NULL);
 		wake_up_all_idle_cpus();
+	}
 }
 
 /**

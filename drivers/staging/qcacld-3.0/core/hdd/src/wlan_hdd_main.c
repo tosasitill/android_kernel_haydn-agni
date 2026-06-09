@@ -3877,8 +3877,7 @@ static int hdd_wlan_register_pm_qos_notifier(struct hdd_context *hdd_ctx)
 
 	qdf_spinlock_create(&hdd_ctx->pm_qos_lock);
 	hdd_ctx->pm_qos_notifier.notifier_call = wlan_hdd_pm_qos_notify;
-	ret = pm_qos_add_notifier(PM_QOS_CPU_DMA_LATENCY,
-				  &hdd_ctx->pm_qos_notifier);
+	ret = cpu_latency_qos_add_notifier(&hdd_ctx->pm_qos_notifier);
 	if (ret)
 		hdd_err("Failed to register PM_QOS notifier: %d", ret);
 	else
@@ -3905,8 +3904,7 @@ static void hdd_wlan_unregister_pm_qos_notifier(struct hdd_context *hdd_ctx)
 		return;
 	}
 
-	ret = pm_qos_remove_notifier(PM_QOS_CPU_DMA_LATENCY,
-				     &hdd_ctx->pm_qos_notifier);
+	ret = cpu_latency_qos_remove_notifier(&hdd_ctx->pm_qos_notifier);
 	if (ret)
 		hdd_warn("Failed to remove qos notifier, err = %d\n", ret);
 
@@ -19616,4 +19614,3 @@ static const struct kernel_param_ops timer_multiplier_ops = {
 };
 
 module_param_cb(timer_multiplier, &timer_multiplier_ops, NULL, 0644);
-
