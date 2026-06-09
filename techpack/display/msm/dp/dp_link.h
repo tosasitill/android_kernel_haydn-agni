@@ -6,11 +6,95 @@
 #ifndef _DP_LINK_H_
 #define _DP_LINK_H_
 
+#include <linux/delay.h>
+#include <linux/errno.h>
+
 #include "dp_aux.h"
 
 #define DS_PORT_STATUS_CHANGED 0x200
 #define DP_TEST_BIT_DEPTH_UNKNOWN 0xFFFFFFFF
 #define DP_LINK_ENUM_STR(x)		#x
+#define DP_LINK_CAP_ENHANCED_FRAMING	BIT(0)
+
+struct drm_dp_link {
+	unsigned char revision;
+	unsigned int rate;
+	unsigned int num_lanes;
+	unsigned long capabilities;
+};
+
+static inline int drm_dp_link_configure(struct drm_dp_aux *aux,
+		struct drm_dp_link *link)
+{
+	ssize_t ret;
+	u8 values[2];
+
+	values[0] = drm_dp_link_rate_to_bw_code(link->rate);
+	values[1] = link->num_lanes;
+
+	if (link->capabilities & DP_LINK_CAP_ENHANCED_FRAMING)
+		values[1] |= DP_LANE_COUNT_ENHANCED_FRAME_EN;
+
+	ret = drm_dp_dpcd_write(aux, DP_LINK_BW_SET, values, sizeof(values));
+	if (ret < 0)
+		return ret;
+
+	return ret == sizeof(values) ? 0 : -EIO;
+}
+
+static inline int drm_dp_link_power_up(struct drm_dp_aux *aux,
+		struct drm_dp_link *link)
+{
+	ssize_t ret;
+	u8 value;
+
+	if (link->revision < 0x11)
+		return 0;
+
+	ret = drm_dp_dpcd_readb(aux, DP_SET_POWER, &value);
+	if (ret < 0)
+		return ret;
+	if (ret != 1)
+		return -EIO;
+
+	value &= ~DP_SET_POWER_MASK;
+	value |= DP_SET_POWER_D0;
+
+	ret = drm_dp_dpcd_writeb(aux, DP_SET_POWER, value);
+	if (ret < 0)
+		return ret;
+	if (ret != 1)
+		return -EIO;
+
+	usleep_range(1000, 2000);
+
+	return 0;
+}
+
+static inline int drm_dp_link_power_down(struct drm_dp_aux *aux,
+		struct drm_dp_link *link)
+{
+	ssize_t ret;
+	u8 value;
+
+	if (link->revision < 0x11)
+		return 0;
+
+	ret = drm_dp_dpcd_readb(aux, DP_SET_POWER, &value);
+	if (ret < 0)
+		return ret;
+	if (ret != 1)
+		return -EIO;
+
+	value &= ~DP_SET_POWER_MASK;
+	value |= DP_SET_POWER_D3;
+
+	ret = drm_dp_dpcd_writeb(aux, DP_SET_POWER, value);
+	if (ret < 0)
+		return ret;
+
+	return ret == 1 ? 0 : -EIO;
+}
 
 #ifndef DP_TEST_PHY_PATTERN
 #define DP_TEST_PHY_PATTERN			DP_PHY_TEST_PATTERN

@@ -275,6 +275,28 @@ struct drm_display_mode {
 	u32 flags;
 
 	/**
+	 * @private:
+	 *
+	 * Downstream display drivers use this to attach mode-specific private
+	 * data while translating between panel and DRM modes.
+	 */
+	int *private;
+
+	/**
+	 * @private_flags:
+	 *
+	 * Downstream display-private mode flags.
+	 */
+	int private_flags;
+
+	/**
+	 * @vrefresh:
+	 *
+	 * Downstream cached vertical refresh rate for panel modes.
+	 */
+	int vrefresh;
+
+	/**
 	 * @crtc_clock:
 	 *
 	 * Actual pixel or dot clock in the hardware. This differs from the

@@ -31,6 +31,8 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/iommu.h>
+#include <linux/jiffies.h>
+#include <linux/ktime.h>
 #include <linux/types.h>
 #include <linux/of_graph.h>
 #include <linux/of_device.h>
@@ -1383,8 +1385,8 @@ static inline unsigned long timeout_to_jiffies(const ktime_t *timeout)
 		remaining_jiffies = 0;
 	} else {
 		ktime_t rem = ktime_sub(*timeout, now);
-		struct timespec ts = ktime_to_timespec(rem);
-		remaining_jiffies = timespec_to_jiffies(&ts);
+		struct timespec64 ts = ktime_to_timespec64(rem);
+		remaining_jiffies = timespec64_to_jiffies(&ts);
 	}
 
 	return remaining_jiffies;
