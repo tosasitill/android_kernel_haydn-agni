@@ -1007,6 +1007,7 @@ static int init_events_group(void)
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_SCHED_WALT)
 static void nr_notify_userspace(struct work_struct *work)
 {
 	sysfs_notify(notify_kobj, NULL, "aggr_top_load");
@@ -1016,8 +1017,8 @@ static void nr_notify_userspace(struct work_struct *work)
 }
 
 static int msm_perf_core_ctl_notify(struct notifier_block *nb,
-					unsigned long unused,
-					void *data)
+						unsigned long unused,
+						void *data)
 {
 	static unsigned int tld, nrb, i;
 	static unsigned int top_ld[CLUSTER_MAX], curr_cp[CLUSTER_MAX];
@@ -1052,6 +1053,7 @@ static int msm_perf_core_ctl_notify(struct notifier_block *nb,
 static struct notifier_block msm_perf_nb = {
 	.notifier_call = msm_perf_core_ctl_notify
 };
+#endif
 
 static bool core_ctl_register;
 static ssize_t get_core_ctl_register(struct kobject *kobj,
@@ -1075,10 +1077,17 @@ static ssize_t set_core_ctl_register(struct kobject *kobj,
 	if (core_ctl_register == old_val)
 		return count;
 
+#if IS_ENABLED(CONFIG_SCHED_WALT)
 	if (core_ctl_register)
 		core_ctl_notifier_register(&msm_perf_nb);
 	else
 		core_ctl_notifier_unregister(&msm_perf_nb);
+#else
+	if (core_ctl_register) {
+		core_ctl_register = false;
+		return -EOPNOTSUPP;
+	}
+#endif
 
 	return count;
 }

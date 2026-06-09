@@ -229,7 +229,6 @@ DEFINE_DEBUGFS_ATTRIBUTE(cvp_pwr_fops, cvp_power_get, cvp_power_set, "%llu\n");
 
 struct dentry *msm_cvp_debugfs_init_drv(void)
 {
-	bool ok = false;
 	struct dentry *dir = NULL;
 
 	dir = debugfs_create_dir("msm_cvp", NULL);
@@ -238,36 +237,19 @@ struct dentry *msm_cvp_debugfs_init_drv(void)
 		goto failed_create_dir;
 	}
 
-#define __debugfs_create(__type, __name, __value) ({                          \
-	struct dentry *f = debugfs_create_##__type(__name, 0644,	\
-		dir, __value);                                                \
-	if (IS_ERR_OR_NULL(f)) {                                              \
-		dprintk(CVP_ERR, "Failed creating debugfs file '%pd/%s'\n",  \
-			dir, __name);                                         \
-		f = NULL;                                                     \
-	}                                                                     \
-	f;                                                                    \
-})
-
-	ok =
-	__debugfs_create(x32, "debug_level", &msm_cvp_debug) &&
-	__debugfs_create(x32, "fw_level", &msm_cvp_fw_debug) &&
-	__debugfs_create(u32, "fw_debug_mode", &msm_cvp_fw_debug_mode) &&
-	__debugfs_create(bool, "fw_coverage", &msm_cvp_fw_coverage) &&
-	__debugfs_create(u32, "fw_low_power_mode",
-			&msm_cvp_fw_low_power_mode) &&
-	__debugfs_create(u32, "debug_output", &msm_cvp_debug_out) &&
-	__debugfs_create(bool, "disable_thermal_mitigation",
-			&msm_cvp_thermal_mitigation_disabled) &&
-	__debugfs_create(bool, "disable_cacheop",
-			&msm_cvp_cacheop_disabled) &&
-	__debugfs_create(bool, "disable_cvp_syscache",
-			&msm_cvp_syscache_disable);
-
-#undef __debugfs_create
-
-	if (!ok)
-		goto failed_create_dir;
+	debugfs_create_x32("debug_level", 0644, dir, &msm_cvp_debug);
+	debugfs_create_x32("fw_level", 0644, dir, &msm_cvp_fw_debug);
+	debugfs_create_u32("fw_debug_mode", 0644, dir, &msm_cvp_fw_debug_mode);
+	debugfs_create_bool("fw_coverage", 0644, dir, &msm_cvp_fw_coverage);
+	debugfs_create_u32("fw_low_power_mode", 0644, dir,
+			   &msm_cvp_fw_low_power_mode);
+	debugfs_create_u32("debug_output", 0644, dir, &msm_cvp_debug_out);
+	debugfs_create_bool("disable_thermal_mitigation", 0644, dir,
+			    &msm_cvp_thermal_mitigation_disabled);
+	debugfs_create_bool("disable_cacheop", 0644, dir,
+			    &msm_cvp_cacheop_disabled);
+	debugfs_create_bool("disable_cvp_syscache", 0644, dir,
+			    &msm_cvp_syscache_disable);
 
 	debugfs_create_file("cvp_power", 0644, dir, NULL, &cvp_pwr_fops);
 

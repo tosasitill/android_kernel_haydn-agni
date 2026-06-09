@@ -594,19 +594,37 @@ static int pil_init_image_trusted(struct pil_desc *pil,
 		const u8 *metadata, size_t size)
 {
 	struct pil_tz_data *d = desc_to_data(pil);
-	u32 scm_ret = 0;
+	struct device *scm_dev;
+	dma_addr_t metadata_phys;
+	void *metadata_buf;
+	int scm_ret = 0;
 	int ret;
 
 	if (d->subsys_desc.no_auth)
 		return 0;
 
-	ret = scm_pas_enable_bw();
-	if (ret)
-		return ret;
+	scm_dev = qcom_get_scm_device();
+	if (!scm_dev)
+		return -EPROBE_DEFER;
 
-	scm_ret = qcom_scm_pas_init_image(d->pas_id, metadata, size);
+	metadata_buf = dma_alloc_coherent(scm_dev, size, &metadata_phys,
+					  GFP_KERNEL);
+	if (!metadata_buf)
+		return -ENOMEM;
+
+	memcpy(metadata_buf, metadata, size);
+
+	ret = scm_pas_enable_bw();
+	if (ret) {
+		scm_ret = ret;
+		goto free_metadata;
+	}
+
+	scm_ret = qcom_scm_pas_init_image(d->pas_id, metadata_phys);
 
 	scm_pas_disable_bw();
+free_metadata:
+	dma_free_coherent(scm_dev, size, metadata_buf, metadata_phys);
 	return scm_ret;
 }
 

@@ -18,9 +18,19 @@ on:
         type: string
       build_targets:
         description: Space-separated make targets
-        default: Image dtbs
+        default: Image dtbs modules
         required: false
         type: string
+      vendor_config:
+        description: Optional arm64 vendor config fragment to merge
+        default: vendor/haydn_GKI.config
+        required: false
+        type: string
+      disable_ksyms_trim:
+        description: Disable exported symbol trimming for bring-up module builds
+        default: true
+        required: false
+        type: boolean
       disable_lto_cfi:
         description: Disable LTO and CFI for 5.10 bring-up builds
         default: true
@@ -40,7 +50,9 @@ jobs:
     env:
       TOOLCHAIN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.toolchain || 'cpullvm' }}
       DEFCONFIG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.defconfig || 'haydn_gki_defconfig' }}
-      BUILD_TARGETS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_targets || 'Image dtbs' }}
+      BUILD_TARGETS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_targets || 'Image dtbs modules' }}
+      VENDOR_CONFIG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.vendor_config || 'vendor/haydn_GKI.config' }}
+      DISABLE_KSYMS_TRIM: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.disable_ksyms_trim || 'true' }}
       DISABLE_LTO_CFI: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.disable_lto_cfi || 'true' }}
       OUT_DIR: ${{ github.workspace }}/OUTPUT
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -138,6 +150,8 @@ jobs:
             -e TOOLCHAIN="${TOOLCHAIN}" \
             -e DEFCONFIG="${DEFCONFIG}" \
             -e BUILD_TARGETS="${BUILD_TARGETS}" \
+            -e VENDOR_CONFIG="${VENDOR_CONFIG}" \
+            -e DISABLE_KSYMS_TRIM="${DISABLE_KSYMS_TRIM}" \
             -e DISABLE_LTO_CFI="${DISABLE_LTO_CFI}" \
             -e CPULLVM_BIN="${CPULLVM_BIN:-}" \
             -e OUT_DIR=/out \

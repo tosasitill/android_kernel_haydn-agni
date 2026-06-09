@@ -2436,7 +2436,7 @@ int cnss_do_ramdump(struct cnss_plat_data *plat_priv)
 	segment.v_address = (void __iomem *)ramdump_info->ramdump_va;
 	segment.size = ramdump_info->ramdump_size;
 
-	return qcom_ramdump(ramdump_info->ramdump_dev, &segment, 1);
+	return do_ramdump(ramdump_info->ramdump_dev, &segment, 1);
 }
 
 int cnss_do_elf_ramdump(struct cnss_plat_data *plat_priv)
@@ -2483,8 +2483,8 @@ int cnss_do_elf_ramdump(struct cnss_plat_data *plat_priv)
 	ramdump_segs->v_address = (void __iomem *)(&meta_info);
 	ramdump_segs->size = sizeof(meta_info);
 
-	ret = qcom_elf_ramdump(info_v2->ramdump_dev, ramdump_segs,
-			       dump_data->nentries + 1);
+	ret = do_elf_ramdump(info_v2->ramdump_dev, ramdump_segs,
+			     dump_data->nentries + 1);
 	kfree(ramdump_segs);
 
 	return ret;

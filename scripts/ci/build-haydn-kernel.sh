@@ -25,7 +25,9 @@ fi
 : "${OUT_DIR:=/out}"
 : "${CCACHE_DIR:=/ccache}"
 : "${MAKE_JOBS:=$(nproc)}"
-: "${BUILD_TARGETS:=Image dtbs}"
+: "${BUILD_TARGETS:=Image dtbs modules}"
+: "${VENDOR_CONFIG:=vendor/haydn_GKI.config}"
+: "${DISABLE_KSYMS_TRIM:=1}"
 : "${DISABLE_LTO_CFI:=1}"
 
 mkdir -p "${OUT_DIR}" "${CCACHE_DIR}"
@@ -51,6 +53,14 @@ esac
 
 if [ ! -f "arch/arm64/configs/${DEFCONFIG}" ]; then
 	die "missing arm64 defconfig: arch/arm64/configs/${DEFCONFIG}"
+fi
+
+if [ -n "${VENDOR_CONFIG}" ]; then
+	if [ ! -f "arch/arm64/configs/${VENDOR_CONFIG}" ]; then
+		die "missing arm64 vendor config: arch/arm64/configs/${VENDOR_CONFIG}"
+	fi
+elif [ "${BUILD_TARGETS//modules/}" != "${BUILD_TARGETS}" ]; then
+	log "module build requested without a vendor config fragment"
 fi
 
 version="$(awk '
@@ -93,6 +103,8 @@ log "toolchain: ${TOOLCHAIN}"
 log "defconfig: ${DEFCONFIG}"
 log "out dir: ${OUT_DIR}"
 log "build targets: ${BUILD_TARGETS}"
+log "vendor config: ${VENDOR_CONFIG:-<none>}"
+log "disable ksym trimming: ${DISABLE_KSYMS_TRIM}"
 log "disable LTO/CFI: ${DISABLE_LTO_CFI}"
 log "extra KCFLAGS: ${extra_kcflags[*]:-<none>}"
 
@@ -114,12 +126,43 @@ fi
 	printf 'TOOLCHAIN=%s\n' "${TOOLCHAIN}"
 	printf 'DEFCONFIG=%s\n' "${DEFCONFIG}"
 	printf 'BUILD_TARGETS=%s\n' "${BUILD_TARGETS}"
+	printf 'VENDOR_CONFIG=%s\n' "${VENDOR_CONFIG:-<none>}"
+	printf 'DISABLE_KSYMS_TRIM=%s\n' "${DISABLE_KSYMS_TRIM}"
 	printf 'DISABLE_LTO_CFI=%s\n' "${DISABLE_LTO_CFI}"
 	printf 'KCFLAGS=%s\n' "${extra_kcflags[*]:-<none>}"
 } > "${OUT_DIR}/build-metadata.txt"
 
 log "running defconfig"
 make -j"${MAKE_JOBS}" "${make_args[@]}" "${DEFCONFIG}" 2>&1 | tee "${OUT_DIR}/defconfig.log"
+
+if [ -n "${VENDOR_CONFIG}" ]; then
+	log "merging vendor config: ${VENDOR_CONFIG}"
+	scripts/kconfig/merge_config.sh \
+		-m \
+		-O "${OUT_DIR}" \
+		"${OUT_DIR}/.config" \
+		"arch/arm64/configs/${VENDOR_CONFIG}" 2>&1 | tee -a "${OUT_DIR}/defconfig.log"
+	make -j"${MAKE_JOBS}" "${make_args[@]}" olddefconfig 2>&1 | tee -a "${OUT_DIR}/defconfig.log"
+fi
+
+log "restricting SoC target to Lahaina/Haydn bring-up"
+scripts/config --file "${OUT_DIR}/.config" \
+	-e ARCH_LAHAINA \
+	-d ARCH_SHIMA
+make -j"${MAKE_JOBS}" "${make_args[@]}" olddefconfig 2>&1 | tee -a "${OUT_DIR}/defconfig.log"
+grep -E 'CONFIG_ARCH_(LAHAINA|SHIMA)' "${OUT_DIR}/.config" | sort | tee -a "${OUT_DIR}/defconfig.log" || true
+
+case "${DISABLE_KSYMS_TRIM}" in
+	1|true|TRUE|yes|YES)
+		log "disabling exported symbol trimming for bring-up"
+		scripts/config --file "${OUT_DIR}/.config" \
+			-d TRIM_UNUSED_KSYMS \
+			-d UNUSED_KSYMS_WHITELIST_ONLY \
+			--set-str UNUSED_KSYMS_WHITELIST ""
+		make -j"${MAKE_JOBS}" "${make_args[@]}" olddefconfig 2>&1 | tee -a "${OUT_DIR}/defconfig.log"
+		grep -E 'CONFIG_(TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST)' "${OUT_DIR}/.config" | sort | tee -a "${OUT_DIR}/defconfig.log" || true
+		;;
+esac
 
 case "${DISABLE_LTO_CFI}" in
 	1|true|TRUE|yes|YES)
