@@ -23,10 +23,15 @@
 #include <drm/drm_fixed.h>
 #include <drm/drm_panel.h>
 #include <linux/debugfs.h>
+#include <linux/dma-map-ops.h>
+#include <linux/limits.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/dma-buf.h>
 #include <linux/memblock.h>
+#include <linux/qcom-iommu-util.h>
+#include <linux/soc/qcom/panel_event_notifier.h>
+#include <linux/string.h>
 #include <linux/suspend.h>
 #include <drm/drm_atomic_uapi.h>
 #include <drm/drm_probe_helper.h>
@@ -186,6 +191,7 @@ static int _sde_kms_dump_clks_state(struct sde_kms *sde_kms)
 	int i;
 	struct device *dev = sde_kms->dev->dev;
 
+	(void)dev;
 	SDE_INFO("runtime PM suspended:%d", pm_runtime_suspended(dev));
 
 	for (i = 0; i < sde_kms->dsi_display_count; i++)
@@ -359,7 +365,7 @@ static int _sde_kms_scm_call(struct sde_kms *sde_kms, int vmid)
 		SDE_DEBUG("sid_mask[%d]: %d\n", i, sec_sid[i]);
 	}
 
-	ret = dma_coerce_mask_and_coherent(&dummy, DMA_BIT_MASK(64));
+	ret = dma_coerce_mask_and_coherent(&dummy, U64_MAX);
 	if (ret) {
 		SDE_ERROR("Failed to set dma mask for dummy dev %d\n", ret);
 		goto map_error;
@@ -911,12 +917,13 @@ static int _sde_kms_unmap_all_splash_regions(struct sde_kms *sde_kms)
 	return ret;
 }
 
-static int _sde_kms_get_blank(struct drm_crtc_state *crtc_state,
+static enum panel_event_notification_type _sde_kms_get_panel_event(
+		struct drm_crtc_state *crtc_state,
 		struct drm_connector_state *conn_state)
 {
-	int lp_mode, blank;
+	int lp_mode;
 
-	if (crtc_state->active)
+	if (crtc_state && crtc_state->active)
 		lp_mode = sde_connector_get_property(conn_state,
 							CONNECTOR_PROP_LP);
 	else
@@ -924,57 +931,98 @@ static int _sde_kms_get_blank(struct drm_crtc_state *crtc_state,
 
 	switch (lp_mode) {
 	case SDE_MODE_DPMS_ON:
-		blank = DRM_PANEL_BLANK_UNBLANK;
-		break;
+		return DRM_PANEL_EVENT_UNBLANK;
 	case SDE_MODE_DPMS_LP1:
 	case SDE_MODE_DPMS_LP2:
-		blank = DRM_PANEL_BLANK_LP;
-		break;
+		return DRM_PANEL_EVENT_BLANK_LP;
 	case SDE_MODE_DPMS_OFF:
 	default:
-		blank = DRM_PANEL_BLANK_POWERDOWN;
-		break;
+		return DRM_PANEL_EVENT_BLANK;
+	}
+}
+
+static enum panel_event_notifier_tag _sde_kms_get_panel_event_tag(
+		struct sde_connector *sde_conn)
+{
+	struct dsi_display *display;
+	u32 display_type;
+
+	if (!sde_conn)
+		return PANEL_EVENT_NOTIFICATION_PRIMARY;
+
+	if (sde_conn->encoder) {
+		display_type = sde_encoder_get_display_type(sde_conn->encoder);
+		if (display_type == SDE_CONNECTOR_SECONDARY)
+			return PANEL_EVENT_NOTIFICATION_SECONDARY;
+		if (display_type == SDE_CONNECTOR_PRIMARY)
+			return PANEL_EVENT_NOTIFICATION_PRIMARY;
 	}
 
-	return blank;
+	if (sde_conn->connector_type != DRM_MODE_CONNECTOR_DSI ||
+			!sde_conn->display)
+		return PANEL_EVENT_NOTIFICATION_PRIMARY;
+
+	display = sde_conn->display;
+	if (display->display_type && !strcmp(display->display_type, "secondary"))
+		return PANEL_EVENT_NOTIFICATION_SECONDARY;
+
+	return PANEL_EVENT_NOTIFICATION_PRIMARY;
 }
 
 static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
-			unsigned long event)
+			bool early_trigger)
 {
 	struct drm_connector *connector;
-	struct drm_connector_state *old_conn_state;
-	struct drm_crtc_state *old_crtc_state;
+	struct drm_connector_state *old_conn_state, *new_conn_state;
+	struct drm_crtc_state *old_crtc_state = NULL, *new_crtc_state = NULL;
 	struct drm_crtc *crtc;
-	int i, old_mode, new_mode, old_fps, new_fps;
+	struct sde_connector *sde_conn;
+	struct panel_event_notification notification;
+	enum panel_event_notifier_tag tag;
+	enum panel_event_notification_type old_mode, new_mode;
+	u32 old_fps, new_fps;
+	int i;
 
-	for_each_old_connector_in_state(old_state, connector,
-			old_conn_state, i) {
-		crtc = connector->state->crtc ? connector->state->crtc :
+	for_each_oldnew_connector_in_state(old_state, connector,
+			old_conn_state, new_conn_state, i) {
+		if (!new_conn_state || !old_conn_state)
+			continue;
+
+		crtc = new_conn_state->crtc ? new_conn_state->crtc :
 			old_conn_state->crtc;
 		if (!crtc)
 			continue;
 
-		new_fps = crtc->state->mode.vrefresh;
-		new_mode = _sde_kms_get_blank(crtc->state, connector->state);
-		if (old_conn_state->crtc) {
-			old_crtc_state = drm_atomic_get_existing_crtc_state(
-					old_state, old_conn_state->crtc);
+		new_crtc_state = new_conn_state->crtc ?
+			drm_atomic_get_new_crtc_state(old_state,
+					new_conn_state->crtc) : NULL;
+		old_crtc_state = old_conn_state->crtc ?
+			drm_atomic_get_old_crtc_state(old_state,
+					old_conn_state->crtc) : NULL;
 
-			old_fps = old_crtc_state->mode.vrefresh;
-			old_mode = _sde_kms_get_blank(old_crtc_state,
+		new_fps = new_crtc_state ? new_crtc_state->mode.vrefresh : 0;
+		new_mode = _sde_kms_get_panel_event(new_crtc_state,
+				new_conn_state);
+		if (old_conn_state->crtc) {
+			old_fps = old_crtc_state ?
+				old_crtc_state->mode.vrefresh : 0;
+			old_mode = _sde_kms_get_panel_event(old_crtc_state,
 							old_conn_state);
 		} else {
 			old_fps = 0;
-			old_mode = DRM_PANEL_BLANK_POWERDOWN;
+			old_mode = DRM_PANEL_EVENT_BLANK;
 		}
 
 		if ((old_mode != new_mode) || (old_fps != new_fps)) {
-			struct drm_panel_notifier notifier_data;
+			sde_conn = to_sde_connector(connector);
+			if (sde_conn->connector_type != DRM_MODE_CONNECTOR_DSI ||
+					!sde_conn->drv_panel)
+				continue;
 
 			SDE_EVT32(old_mode, new_mode, old_fps, new_fps,
-				connector->panel, crtc->state->active,
-				old_conn_state->crtc, event);
+				sde_conn->drv_panel,
+				new_crtc_state ? new_crtc_state->active : 0,
+				old_conn_state->crtc, early_trigger);
 			pr_debug("change detected (power mode %d->%d, fps %d->%d)\n",
 				old_mode, new_mode, old_fps, new_fps);
 
@@ -984,15 +1032,17 @@ static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
 			 */
 
 			if ((old_mode == new_mode) && (old_fps != new_fps))
-				new_mode = DRM_PANEL_BLANK_FPS_CHANGE;
+				new_mode = DRM_PANEL_EVENT_FPS_CHANGE;
 
-			notifier_data.data = &new_mode;
-			notifier_data.refresh_rate = new_fps;
-			notifier_data.id = connector->base.id;
+			memset(&notification, 0, sizeof(notification));
+			notification.notif_type = new_mode;
+			notification.notif_data.old_fps = old_fps;
+			notification.notif_data.new_fps = new_fps;
+			notification.notif_data.early_trigger = early_trigger;
+			notification.panel = sde_conn->drv_panel;
+			tag = _sde_kms_get_panel_event_tag(sde_conn);
 
-			if (connector->panel)
-				drm_panel_notifier_call_chain(connector->panel,
-							event, &notifier_data);
+			panel_event_notification_trigger(tag, &notification);
 		}
 	}
 
@@ -1191,7 +1241,7 @@ static void sde_kms_prepare_commit(struct msm_kms *kms,
 		vm_ops->vm_prepare_commit(sde_kms, state);
 
 end_vm:
-	_sde_kms_drm_check_dpms(state, DRM_PANEL_EARLY_EVENT_BLANK);
+	_sde_kms_drm_check_dpms(state, true);
 end:
 	SDE_ATRACE_END("prepare_commit");
 }
@@ -1520,7 +1570,7 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 			SDE_ERROR("vm post commit failed, rc = %d\n",
 				  rc);
 	}
-	_sde_kms_drm_check_dpms(old_state, DRM_PANEL_EVENT_BLANK);
+	_sde_kms_drm_check_dpms(old_state, false);
 
 	pm_runtime_put_sync(sde_kms->dev->dev);
 

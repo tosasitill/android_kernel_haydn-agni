@@ -3035,10 +3035,10 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 
 	spin_lock_init(&c_conn->event_lock);
 
-	c_conn->base.panel = panel;
 	c_conn->connector_type = connector_type;
 	c_conn->encoder = encoder;
 	c_conn->display = display;
+	c_conn->drv_panel = panel;
 
 	c_conn->dpms_mode = DRM_MODE_DPMS_ON;
 	c_conn->lp_mode = 0;
