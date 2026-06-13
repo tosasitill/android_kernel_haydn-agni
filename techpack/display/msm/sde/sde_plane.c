@@ -38,8 +38,7 @@
 #include "sde_plane.h"
 #include "sde_color_processing.h"
 
-#define SDE_DEBUG_PLANE(pl, fmt, ...) SDE_DEBUG("plane%d " fmt,\
-		(pl) ? (pl)->base.base.id : -1, ##__VA_ARGS__)
+#define SDE_DEBUG_PLANE(pl, fmt, ...) do { (void)(pl); } while (0)
 
 #define SDE_ERROR_PLANE(pl, fmt, ...) SDE_ERROR("plane%d " fmt,\
 		(pl) ? (pl)->base.base.id : -1, ##__VA_ARGS__)
