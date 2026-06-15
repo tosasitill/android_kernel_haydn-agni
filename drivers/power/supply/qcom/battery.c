@@ -2044,8 +2044,6 @@ static void pl_config_init(struct pl_data *chip, int smb_version)
 
 static void qcom_batt_create_debugfs(struct pl_data *chip)
 {
-	struct dentry *entry;
-
 	chip->dfs_root = debugfs_create_dir("battery", NULL);
 	if (IS_ERR_OR_NULL(chip->dfs_root)) {
 		pr_err("Couldn't create battery debugfs rc=%ld\n",
@@ -2053,11 +2051,8 @@ static void qcom_batt_create_debugfs(struct pl_data *chip)
 		return;
 	}
 
-	entry = debugfs_create_u32("debug_mask", 0600, chip->dfs_root,
+	debugfs_create_u32("debug_mask", 0600, chip->dfs_root,
 			&debug_mask);
-	if (IS_ERR_OR_NULL(entry))
-		pr_err("Couldn't create force_dc_psy_update file rc=%ld\n",
-			(long)entry);
 }
 
 #define DEFAULT_RESTRICTED_CURRENT_UA	1000000

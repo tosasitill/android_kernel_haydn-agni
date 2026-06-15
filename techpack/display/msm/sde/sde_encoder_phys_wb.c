@@ -1047,14 +1047,13 @@ static void sde_encoder_phys_wb_setup(
 		struct sde_encoder_phys *phys_enc)
 {
 	struct sde_encoder_phys_wb *wb_enc = to_sde_encoder_phys_wb(phys_enc);
-	struct sde_hw_wb *hw_wb = wb_enc->hw_wb;
-	struct drm_display_mode mode = phys_enc->cached_mode;
 	struct drm_framebuffer *fb;
 	struct sde_rect *wb_roi = &wb_enc->wb_roi;
 
 	SDE_DEBUG("[mode_set:%d,\"%s\",%d,%d]\n",
-			hw_wb->idx - WB_0, mode.name,
-			mode.hdisplay, mode.vdisplay);
+			wb_enc->hw_wb->idx - WB_0, phys_enc->cached_mode.name,
+			phys_enc->cached_mode.hdisplay,
+			phys_enc->cached_mode.vdisplay);
 
 	memset(wb_roi, 0, sizeof(struct sde_rect));
 
@@ -1234,9 +1233,7 @@ static void sde_encoder_phys_wb_mode_set(
 		struct drm_display_mode *mode,
 		struct drm_display_mode *adj_mode)
 {
-	struct sde_encoder_phys_wb *wb_enc = to_sde_encoder_phys_wb(phys_enc);
 	struct sde_rm *rm = &phys_enc->sde_kms->rm;
-	struct sde_hw_wb *hw_wb = wb_enc->hw_wb;
 	struct sde_rm_hw_iter iter;
 	int i, instance;
 
@@ -1244,7 +1241,8 @@ static void sde_encoder_phys_wb_mode_set(
 	instance = phys_enc->split_role == ENC_ROLE_SLAVE ? 1 : 0;
 
 	SDE_DEBUG("[mode_set_cache:%d,\"%s\",%d,%d]\n",
-			hw_wb->idx - WB_0, mode->name,
+			to_sde_encoder_phys_wb(phys_enc)->hw_wb->idx - WB_0,
+			mode->name,
 			mode->hdisplay, mode->vdisplay);
 
 	phys_enc->hw_ctl = NULL;
@@ -1667,11 +1665,10 @@ static void _sde_encoder_phys_wb_destroy_internal_fb(
 static void sde_encoder_phys_wb_enable(struct sde_encoder_phys *phys_enc)
 {
 	struct sde_encoder_phys_wb *wb_enc = to_sde_encoder_phys_wb(phys_enc);
-	struct sde_hw_wb *hw_wb = wb_enc->hw_wb;
 	struct drm_device *dev;
 	struct drm_connector *connector;
 
-	SDE_DEBUG("[wb:%d]\n", hw_wb->idx - WB_0);
+	SDE_DEBUG("[wb:%d]\n", wb_enc->hw_wb->idx - WB_0);
 
 	if (!wb_enc->base.parent || !wb_enc->base.parent->dev) {
 		SDE_ERROR("invalid drm device\n");
@@ -1826,11 +1823,8 @@ static int sde_encoder_phys_wb_init_debugfs(
 	if (!phys_enc || !wb_enc->hw_wb || !debugfs_root)
 		return -EINVAL;
 
-	if (!debugfs_create_u32("wbdone_timeout", 0600,
-			debugfs_root, &wb_enc->wbdone_timeout)) {
-		SDE_ERROR("failed to create debugfs/wbdone_timeout\n");
-		return -ENOMEM;
-	}
+	debugfs_create_u32("wbdone_timeout", 0600,
+			debugfs_root, &wb_enc->wbdone_timeout);
 
 	return 0;
 }
@@ -1855,9 +1849,8 @@ static int sde_encoder_phys_wb_late_register(struct sde_encoder_phys *phys_enc,
 static void sde_encoder_phys_wb_destroy(struct sde_encoder_phys *phys_enc)
 {
 	struct sde_encoder_phys_wb *wb_enc = to_sde_encoder_phys_wb(phys_enc);
-	struct sde_hw_wb *hw_wb = wb_enc->hw_wb;
 
-	SDE_DEBUG("[wb:%d]\n", hw_wb->idx - WB_0);
+	SDE_DEBUG("[wb:%d]\n", wb_enc->hw_wb->idx - WB_0);
 
 	if (!phys_enc)
 		return;

@@ -906,7 +906,6 @@ static int qusb_phy_regulator_init(struct qusb_phy *qphy)
 
 static int qusb_phy_create_debugfs(struct qusb_phy *qphy)
 {
-	struct dentry *file;
 	int ret = 0, i;
 	char name[6];
 
@@ -921,26 +920,10 @@ static int qusb_phy_create_debugfs(struct qusb_phy *qphy)
 
 	for (i = 0; i < 5; i++) {
 		snprintf(name, sizeof(name), "tune%d", (i + 1));
-		file = debugfs_create_x8(name, 0644, qphy->root,
-						&qphy->tune[i]);
-		if (IS_ERR_OR_NULL(file)) {
-			dev_err(qphy->phy.dev,
-				"can't create debugfs entry for %s\n", name);
-			debugfs_remove_recursive(qphy->root);
-			ret = -ENOMEM;
-			goto create_err;
-		}
+		debugfs_create_x8(name, 0644, qphy->root, &qphy->tune[i]);
 	}
 
-	file = debugfs_create_x8("bias_ctrl2", 0644, qphy->root,
-						&qphy->bias_ctrl2);
-	if (IS_ERR_OR_NULL(file)) {
-		dev_err(qphy->phy.dev,
-			"can't create debugfs entry for bias_ctrl2\n");
-		debugfs_remove_recursive(qphy->root);
-		ret = -ENOMEM;
-		goto create_err;
-	}
+	debugfs_create_x8("bias_ctrl2", 0644, qphy->root, &qphy->bias_ctrl2);
 
 create_err:
 	return ret;
