@@ -4,7 +4,7 @@
  * Copyright (C) 2020 XiaoMi, Inc.
  */
 
-#include <linux/notifier.h>
+#include <drm/mi_disp_notifier.h>
 
 static BLOCKING_NOTIFIER_HEAD(mi_disp_notifier_list);
 
